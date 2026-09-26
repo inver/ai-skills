@@ -5,17 +5,21 @@ description: >
   (Design Patterns, 1994) and Martin Fowler's enterprise application patterns
   (Patterns of Enterprise Application Architecture) and produce an evidence-based
   compliance report with file:line references, optionally handed off as an OpenSpec
-  change or plain tickets. Use whenever the user asks to check, review, audit, assess
-  or "analyze" code for design-pattern compliance, GoF / Gang of Four patterns,
+  change or plain tickets. Treats OpenAPI/Swagger specs as the API contract (DTO /
+  Remote Facade / contract-first) and checks codegen vs hand-rolled clients and
+  controllers. Use whenever the user asks to check, review, audit, assess or
+  "analyze" code for design-pattern compliance, GoF / Gang of Four patterns,
   Fowler / PEAA / enterprise patterns, Anemic Domain Model, Transaction Script vs
   Domain Model, Repository / Data Mapper / Unit of Work / Service Layer / DTO usage,
-  misused or missing patterns, over-engineering with patterns, or wants an
-  architecture-quality review framed in pattern terms — even if they only say
-  "does this follow good patterns", "review the architecture of this module" or
-  "what patterns are we using wrong".
+  OpenAPI / Swagger contract compliance, API codegen, frontend client generation
+  from OpenAPI (orval, openapi-typescript, etc.), misused or missing patterns,
+  over-engineering with patterns, or wants an architecture-quality review framed in
+  pattern terms — even if they only say "does this follow good patterns", "review
+  the architecture of this module", "is our OpenAPI the source of truth",
+  "generate the frontend API client from OpenAPI", or "what patterns are we using wrong".
 license: Apache 2.0
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
   tags:
     - architecture
     - design-patterns
@@ -24,11 +28,19 @@ metadata:
     - code-review
     - audit
     - refactoring
+    - openapi
+    - swagger
+    - api-contract
+    - codegen
+    - frontend
+    - orval
+    - openapi-typescript
   improved_from: "inver/ai-skills@main (dev-pattern-compliance-audit)"
   changelog: >
-    1.1.0: Broadened scanner heuristics (TS/Nest/Prisma/FastAPI/React), added
-    sampling/budget guidance, modern-pattern mapping, frontend cross-checks,
-    optional JSON report, self-locating scripts, expanded framework mapping.
+    1.2.0: OpenAPI/Swagger as API contract (DTO, Remote Facade, contract-first);
+    detect specs and codegen; cross-check paths/schemas vs controllers and clients.
+    1.1.0: Broadened scanner heuristics, sampling/budget, modern-pattern mapping,
+    frontend cross-checks, optional JSON report, expanded framework mapping.
 ---
 
 # Pattern Compliance Audit
@@ -39,6 +51,11 @@ Assess how well a codebase uses — and misuses — the two classic pattern cata
 - **PEAA** (Fowler): enterprise application architecture patterns → `references/peaa-catalog.md`
 
 Optional modern mapping (DDD tactical, Ports & Adapters, resilience) → `references/modern-patterns.md`.
+
+**OpenAPI / Swagger as API contract** → `references/openapi-contract.md`. When an OpenAPI
+spec exists (or is generated from annotations), treat it as the process-boundary contract
+(PEAA Data Transfer Object + Remote Facade). Prefer codegen clients/models over hand-rolled
+duplicates; audit drift between spec, generated artifacts, and runtime controllers.
 
 The output is a report a tech lead can act on, and (if the user wants) an OpenSpec change
 or plain ticket list that turns the accepted findings into work.
@@ -84,9 +101,15 @@ SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SKILL_D
 ### 1. Scope
 
 Establish what is being audited: whole repo, one module, or a path. If the user did not say, default to the
-whole repo but tell them you will treat generated code, tests, build output and vendored dirs as out of scope.
+whole repo but tell them you will treat generated code, tests, build output and vendored dirs as out of scope
+**except** when auditing OpenAPI contract fidelity: then *do* inspect generated API clients/models against the
+spec (still skip unrelated generated noise).
 Detect the stack (languages, frameworks, persistence, UI) from the build files — the stack decides which patterns
 the *framework already provides* (see step 4) and so which "missing pattern" findings would be false positives.
+**Locate API contracts:** search for `openapi.yaml` / `openapi.yml` / `openapi.json` / `swagger.yaml` /
+`swagger.json`, `**/api/**/*.yaml`, Redocly/Spectral configs, and build scripts that invoke openapi-generator,
+`openapi-typescript`, orval, speakeasy, Fern, `@openapitools/openapi-generator-cli`, Springdoc, etc. Note whether
+the style is **contract-first** (spec committed, code generated) or **code-first** (annotations → exported spec).
 Read the repo's own architecture docs (`AGENTS.md`, `CLAUDE.md`, `docs/`, ADRs) first; a documented, deliberate
 deviation is not a defect, though it can still be reported as a known trade-off.
 
@@ -99,10 +122,10 @@ python "$SKILL_DIR/scripts/scan_candidates.py" <repo-or-path> [--format md|json]
 It is a fast, regex-based inventory: role-suffix counts, Singleton shapes, `instanceof`/`switch` chains,
 anemic entities, `new` of collaborators inside services, layering leaks, god files/methods, single-implementation
 interfaces, `return null` density, floating-point money, lifecycle fields set from outside their object,
-Nest/Prisma/FastAPI/React-specific signals, and more. **Its output is a list of leads, not findings** —
-regexes cannot tell a legitimate `switch` from a missing Strategy. Every lead you report must be confirmed by
-reading the code. The scanner exists so you spend your reading budget on the 30 places that matter instead of
-skimming 800 files.
+Nest/Prisma/FastAPI/React-specific signals, **OpenAPI/Swagger file locations, codegen markers, and dual
+DTO/client leads**, and more. **Its output is a list of leads, not findings** — regexes cannot tell a
+legitimate `switch` from a missing Strategy. Every lead you report must be confirmed by reading the code.
+The scanner exists so you spend your reading budget on the 30 places that matter instead of skimming 800 files.
 
 The scanner is strongest on Java/Kotlin/Spring, good on TypeScript/Nest/Prisma/React and Python/FastAPI/Django,
 and best-effort elsewhere. State the bias in the report.
@@ -115,25 +138,60 @@ and decide, with evidence:
 
 - **Domain logic style** — Transaction Script, Table Module, or Domain Model; and is there a Service Layer? Where do business rules actually live? Decide this **per entity, not once for the codebase**: an app that is honest Transaction Script over CRUD can still contain one object with a real state machine (a status plus counters and finished/drained flags that must move together, written from other classes). Judge each entity on its own force — "Transaction Script overall" is a profile, not permission to skip the entities that don't fit it. The scanner's `lifecycle_outside_entity` and `anemic_entity` leads point at these.
 - **Data source style** — Active Record, Data Mapper (JPA/Hibernate/Prisma/TypeORM counts), Table/Row Data Gateway; Repository on top?
-- **Presentation / distribution** — MVC/Front Controller/Page Controller, DTOs at the process boundary, Remote Facade, Gateway to external systems.
+- **Presentation / distribution** — MVC/Front Controller/Page Controller, DTOs at the process boundary, Remote Facade, Gateway to external systems. **If OpenAPI is present, the spec *is* the Remote Facade + DTO contract** — see next step.
 - **Concurrency & state** — offline locks (`@Version`, optimistic concurrency tokens), session state strategy, transaction boundaries (Unit of Work).
 - **Base patterns** — Value Object/Money, Special Case, Layer Supertype, Separated Interface, Registry/Plugin.
 
 Detailed "what to look for / how it goes wrong" for each is in `references/peaa-catalog.md`. Read the relevant
 sections rather than the whole file when the codebase is large.
 
-### 4. Credit what the framework already gives you
+### 4. API contract — OpenAPI / Swagger (when present)
+
+When the repo has (or generates) an OpenAPI 3.x / Swagger 2 document, follow `references/openapi-contract.md`.
+
+1. **Identify source of truth** — contract-first (committed `openapi.yaml` drives codegen) vs code-first
+   (Springdoc / Nest Swagger / FastAPI export the runtime API). Dual sources without a single published
+   artifact is itself a finding.
+2. **Credit codegen** — models, clients, and sometimes server stubs from openapi-generator, openapi-typescript,
+   orval, speakeasy, Fern, Kiota, etc. are the correct DTO / Gateway shape. Hand-rolling parallel types or
+   `fetch` wrappers when generated clients exist is over-engineering or drift risk.
+3. **Frontend generation axiom (1.3)** — If the codebase includes a browser SPA, Next.js/Remix app, or BFF
+   that calls this HTTP API **and** a published OpenAPI document exists (committed or reliably exported),
+   the **default correct shape** is a **generated TypeScript client** (and types) from that spec, not a
+   hand-maintained `api.ts` / axios layer / ad-hoc `fetch` helpers. Tools: **orval**, **openapi-typescript**
+   + **openapi-fetch**, **kubb**, **@hey-api/openapi-ts**, **oazapfts**, openapi-generator `typescript-fetch`
+   / `typescript-axios`. Wire generation into `package.json` scripts and CI so the client refreshes when
+   the spec changes. Findings when: (a) OpenAPI exists but the frontend only has hand-rolled clients;
+   (b) both generated and hand-rolled clients are used for the same operations; (c) generated output is
+   edited by hand; (d) no generate script / CI step. **Exceptions** (document under *Deliberately not
+   recommended* or trade-off): tiny one-endpoint prototypes, non-TS frontends without a mature generator,
+   or a documented temporary migration. Still apply the fit test — do not invent OpenAPI *and* codegen
+   for a module with no HTTP consumer.
+4. **Check fidelity** — sample paths and schemas from the spec against controllers/handlers and against
+   generated (or hand-written) clients. Flag: paths in code missing from the spec (or vice versa); request/
+   response fields that diverge; status codes documented but never returned; `additionalProperties` / loose
+   types hiding a real schema.
+5. **Process boundary** — persistence entities must not be the OpenAPI schema unless the team explicitly
+   accepts schema coupling (usually Medium/High). Prefer generated DTOs or explicit API models at the edge.
+6. **Consumers** — if multiple services share one OpenAPI package, treat breaking changes as Remote Facade
+   contract changes; note versioning (`info.version`, path versioning, or header policies).
+
+If there is no OpenAPI artifact and no annotation-based export, skip this step and say so under Method and limits.
+Do not invent an OpenAPI mandate for an internal module with a single client.
+
+### 5. Credit what the framework already gives you
 
 Before writing "missing X", check `references/framework-mapping.md`. Spring's container is a Registry/Plugin
 replacement and a Factory; Spring Data / Prisma / TypeORM is a Repository; JPA is Data Mapper + Unit of Work +
 Identity Map + Lazy Load; `@Transactional` is a Proxy/Decorator; Feign / Nest HttpModule is a Gateway + Proxy;
 Lombok `@Builder` / records are Builder; the servlet/Express/Nest middleware chain is Chain of Responsibility;
-React context is a Registry; and so on. Hand-rolling any of these is itself a finding (reinventing the framework);
-*not* hand-rolling them is not.
+React context is a Registry; **OpenAPI Generator / openapi-typescript / orval models are DTOs; generated
+API clients are Gateways (+ often Proxy)**; and so on. Hand-rolling any of these is itself a finding
+(reinventing the framework or the contract); *not* hand-rolling them is not.
 
-### 5. Evaluate at class level (GoF) + modern mapping
+### 6. Evaluate at class level (GoF) + modern mapping
 
-Walk the leads from the scanner and the hot spots from step 3. For each candidate, classify it:
+Walk the leads from the scanner and the hot spots from steps 3–4. For each candidate, classify it:
 
 | Verdict | Meaning |
 |---|---|
@@ -146,14 +204,14 @@ Walk the leads from the scanner and the hot spots from step 3. For each candidat
 When the team's vocabulary is DDD / Hexagonal / resilience-oriented, also consult `references/modern-patterns.md`
 and prefer the terminology the team already uses (still apply the same fit test).
 
-### 6. Run the cross-checks
+### 7. Run the cross-checks
 
 Judging each class alone misses the defects that come from a pattern being applied *here* but skipped *there*, or
 from code disagreeing with the schema, the tests or its own comments. Work through `references/cross-checks.md`
-(now includes frontend-oriented checks). These are cheap greps plus a read, and they have produced some of the
-highest-value findings.
+(includes frontend-oriented checks and OpenAPI contract fidelity). These are cheap greps plus a read, and they
+have produced some of the highest-value findings.
 
-### 7. Verify, rate, and deduplicate
+### 8. Verify, rate, and deduplicate
 
 - Re-read the cited lines. Confirm the claim from code, not from a class name (`FooFactory` may not be a factory).
 - **Run the citation check** on your draft before you finalise it:
@@ -170,7 +228,7 @@ highest-value findings.
 - Prefer a small number of high-value findings. If you have more than ~15, rank and keep the top; put the rest in
   an appendix table.
 
-### 8. Write the report
+### 9. Write the report
 
 Use `references/report-template.md`. Save it as `docs/pattern-compliance-<YYYY-MM-DD>.md` (create `docs/` if
 absent; if the user asked for chat-only output, print it instead). Every finding has: pattern (catalog + name),
@@ -181,6 +239,9 @@ force is absent, which pre-empts "why didn't you suggest X?". Scope each rejecti
 entities X, Y*" is fine, but a codebase-wide "no Domain Model" must not sit next to an entity you found with a real
 state machine — report that entity as a finding and narrow the rejection.
 
+When OpenAPI is in scope, include a short **API contract** subsection in the architecture profile (source of
+truth, codegen tool, drift summary).
+
 Optionally also emit a machine-readable companion:
 
 ```bash
@@ -190,7 +251,7 @@ python "$SKILL_DIR/scripts/report_to_json.py" docs/pattern-compliance-....md > d
 
 (or produce the JSON structure yourself following the schema in the template).
 
-### 9. Offer the hand-off
+### 10. Offer the hand-off
 
 Findings are a proposal, not a mandate. After the report, ask which findings the user accepts, then — only for
 those — offer one of:
@@ -210,3 +271,10 @@ Do not create a change, edit code, or refactor unprompted: the audit is read-onl
 - **Say what you did not check.** List skipped paths, unsupported languages, and anything you sampled rather than read exhaustively.
 - **Be honest about the scanner.** It is regex-based and strongest on Java/Kotlin/TS/Python; state that in the report's method section.
 - **Budget your reading.** On large codebases, depth on the highest-value findings beats exhaustive coverage.
+- **OpenAPI is the boundary contract when present.** Prefer one published spec + codegen over parallel hand-written
+  DTOs and clients. Do not demand OpenAPI for purely internal, single-client modules. Contract drift (spec vs
+  controller vs client) is a finding; "we should adopt OpenAPI someday" without force is not.
+- **Frontend generation axiom.** OpenAPI present + TS/JS HTTP consumer ⇒ generate the client (orval /
+  openapi-typescript / …) and call that Gateway; do not grow a second hand-rolled API layer. Missing generator
+  when both sides exist is a Medium finding (maintainability / drift); dual clients for the same paths is Medium
+  or High depending on divergence.

@@ -10,9 +10,9 @@ Optionally also emit a companion JSON file with the same findings for tooling (s
 # Pattern compliance report — <scope>
 
 - **Date:** <YYYY-MM-DD> · **Commit:** <short sha> · **Scope:** <paths audited> · **Out of scope:** <generated code, tests, …>
-- **Catalogs:** GoF (23 patterns) · Fowler PEAA · (optional) modern mapping
+- **Catalogs:** GoF (23 patterns) · Fowler PEAA · (optional) modern mapping · OpenAPI contract when present
 - **Stack:** <languages, frameworks, persistence, UI>
-- **Skill version:** 1.1.0
+- **Skill version:** 1.3.0
 
 ## Summary
 
@@ -35,6 +35,7 @@ Optionally also emit a companion JSON file with the same findings for tooling (s
 | Repository / Query Object | | |
 | Presentation | Front Controller + Page Controllers; thin/fat | |
 | Distribution | DTOs? Remote Facade? Gateways to external systems? | |
+| API contract (OpenAPI) | none / contract-first / code-first · FE client: generated (orval/…) | hand-rolled | n/a · drift notes | path to spec + codegen config |
 | Concurrency | `@Version` / tokens? none? | |
 | Transactions (Unit of Work) | owned by … | |
 

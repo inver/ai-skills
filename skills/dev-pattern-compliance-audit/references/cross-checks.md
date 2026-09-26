@@ -14,8 +14,9 @@ Contents:
 5. Locking that never reaches the client
 6. One rule, several homes
 7. Comment / test / docs vs. code
-8. Frontend data-fetch consistency (new)
-9. Client-side business rules leakage (new)
+8. Frontend data-fetch consistency
+9. Client-side business rules leakage
+10. OpenAPI contract fidelity (1.2)
 
 ---
 
@@ -117,3 +118,24 @@ keys, stale-time, or error handling produce inconsistent UI and wasted requests.
   consistency risk for any other client).
 - **Fix shape:** move the rule to the shared domain / service layer; keep the client as a thin renderer of already-decided state.
   Pure presentation helpers (formatting, sorting for display) are fine and should not be reported.
+
+## 10. OpenAPI contract fidelity (1.2+) and frontend generation axiom (1.3)
+
+*Pattern: Remote Facade + DTO (PEAA); Gateway for generated clients.* The published OpenAPI document and the
+runtime handlers / consumers must describe the same boundary. On TS/JS frontends, the default Gateway is
+**generated from the spec** (see `openapi-contract.md` §3b).
+
+- **Check:**
+  1. Locate the published or committed spec (`openapi.yaml`, exported `/openapi.json`, etc.) and any codegen config
+     (`orval.config.*`, `openapi-ts.config.*`, `openapitools.json`, package scripts `generate:api`).
+  2. Sample 5–10 operations: path + method exist in both spec and controllers (and vice versa for public routes).
+  3. For one write and one read: required fields, enums, and nullability match the bound types / response mappers.
+  4. Documented error status codes vs `@ControllerAdvice` / Nest filters / FastAPI exception handlers.
+  5. If generated clients exist, confirm call sites use them rather than parallel hand-rolled `fetch`/SDK wrappers.
+  6. Ensure persistence entities are not the OpenAPI schema unless explicitly accepted.
+  7. **Frontend:** If OpenAPI + TS/JS SPA/BFF exist, is there a generated client? Are feature modules still
+     calling hand-rolled axios/fetch to the same base URL?
+- **Finding when:** path or schema drift; dual source of truth; generated client ignored; entities as API models;
+  OpenAPI + frontend without generation; dual generated + hand-rolled clients for the same paths.
+- **Fix shape:** single publish pipeline; add orval/openapi-typescript + CI generate; openapi-diff/spectral;
+  route SPA traffic through the generated Gateway. See `references/openapi-contract.md`.

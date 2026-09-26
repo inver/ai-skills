@@ -67,9 +67,15 @@ Most codebases never need these. Mention under *Deliberately not recommended* wh
 
 ---
 
+## OpenAPI vs these catalogs
+
+OpenAPI is orthogonal: it is the HTTP **Remote Facade + DTO** contract. Generated clients are Gateways.
+When the team uses Ports & Adapters language, the OpenAPI document describes the driving adapter's HTTP
+port; map findings to that vocabulary when helpful. Details: `references/openapi-contract.md`.
+
 ## How to use this file in the audit
 
-1. Finish the PEAA + GoF pass first.
+1. Finish the PEAA + GoF pass first (and the OpenAPI step when a spec exists).
 2. If the repo's docs, package names, or team language already use DDD / Hexagonal / "ports", rewrite finding titles and recommendations in that vocabulary.
 3. Add at most 1–2 resilience findings when dual-write or timeout problems are concrete.
 4. Never invent a DDD rewrite for an honest Transaction Script application.

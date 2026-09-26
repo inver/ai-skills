@@ -24,7 +24,9 @@ pattern (e.g. `ApplicationContext.getBean` = Service Locator).
 | `@RestController` methods                                               | Page Controller                                                    |                                                                                     |
 | `OncePerRequestFilter`, `SecurityFilterChain`, `HandlerInterceptor`     | Chain of Responsibility (+ Implicit-lock-style cross-cutting)      |                                                                                     |
 | `@FeignClient`, `RestClient`, `WebClient`, `RestTemplate`               | Gateway (+ Proxy for Feign)                                        | Should sit behind one class per external system                                     |
-| OpenAPI Generator models / records for API                              | Data Transfer Object                                               |                                                                                     |
+| OpenAPI Generator / springdoc models for API                            | Data Transfer Object (contract-backed)                             | Prefer generated models over exposing `@Entity` in the OpenAPI schema               |
+| openapi-generator clients / Kiota / speakeasy SDKs                      | Gateway (+ Proxy) + DTO                                            | Parallel hand-rolled clients when codegen exists = drift risk                       |
+| Committed `openapi.yaml` + CI spectral / openapi-diff                   | Remote Facade contract (process boundary)                          | Dual hand-edited + annotation export without one publish step = dual source of truth |
 | `@ConfigurationProperties` records                                      | Value Object + Plugin config                                       |                                                                                     |
 | `@ConditionalOn…`, profiles, `ServiceLoader`                            | Plugin                                                             |                                                                                     |
 | `MockMvc`/WireMock/fakes behind an interface                            | Service Stub                                                       |                                                                                     |
@@ -54,6 +56,8 @@ pattern (e.g. `ApplicationContext.getBean` = Service Locator).
 | Nest providers/modules + DI, Awilix/tsyringe         | Registry/Plugin/Factory (container)                                         |
 | Prisma client / TypeORM / Drizzle                    | Data Mapper (Prisma ≈ Query Object + Metadata Mapping via schema)           |
 | `zod` / `class-validator` schemas, generated API types | DTO + validation                                                          |
+| openapi-typescript / orval / kubb / @hey-api clients | Gateway + DTO (contract-backed); prefer over ad-hoc `fetch` + inline types |
+| Nest `@nestjs/swagger` / tsoa exported OpenAPI       | Code-first Remote Facade contract                                          |
 | `EventEmitter`, RxJS, Nest `@EventPattern`           | Observer                                                                    |
 | Discriminated unions + exhaustive `switch`           | State / Visitor / Special Case idiom                                        |
 | module-level singleton export                        | Singleton (fine for stateless; finding if it holds mutable request state)   |
@@ -68,6 +72,8 @@ pattern (e.g. `ApplicationContext.getBean` = Service Locator).
 | React Router / Next.js App Router                     | Front Controller + Application Controller (client side)                  |
 | Context providers                                     | Registry / dependency injection for the tree                             |
 | Custom hooks / query libs (TanStack Query, SWR)       | Gateway + cache (Identity Map-like) + Observer                           |
+| **orval / openapi-typescript / openapi-fetch / kubb / @hey-api clients from OpenAPI** | **Generated Gateway + DTO (frontend generation axiom — prefer over hand-rolled api/)** |
+| Hand-rolled `api.ts` / axios modules while OpenAPI exists | Missing or dual Gateway — Medium finding when force is real |
 | Reducers / XState / state machines                    | Command + State                                                          |
 | Higher-order components / wrapper components          | Decorator                                                                |
 | Compound components, render props                     | Strategy / Template Method                                               |
@@ -81,6 +87,7 @@ pattern (e.g. `ApplicationContext.getBean` = Service Locator).
 |-------------------------------------------------|---------------------------------------------------------------------------|
 | FastAPI `Depends`                               | DI / Registry / Factory; dependency chains ≈ Chain of Responsibility      |
 | Pydantic models                                 | DTO + Value Object                                                        |
+| FastAPI auto OpenAPI (`/openapi.json`) + client codegen | Code-first Remote Facade + DTO; prefer generated clients for external consumers |
 | SQLAlchemy `Session`                            | Unit of Work + Identity Map; declarative models = Data Mapper             |
 | Django ORM models + `Manager`                   | Active Record (+ Table Data Gateway via Manager)                          |
 | decorators, context managers                    | Decorator, Template Method (`__enter__`/`__exit__`)                       |

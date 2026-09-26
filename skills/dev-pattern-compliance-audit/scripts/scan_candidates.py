@@ -49,8 +49,7 @@ METHOD_DECL = re.compile(
     r"^\s*(?:@\w+(?:\([^)]*\))?\s+)*(?:(?:public|protected|private|static|final|abstract|synchronized|default)\s+)*"
     r"(?:<[^>]+>\s+)?[\w<>\[\],.? ]+?\s+(\w+)\s*\(([^)]*)\)\s*(?:throws [\w., ]+)?\s*\{"
 )
-KT_FUN = re.compile(
-    r"^\s*(?:(?:public|private|protected|internal|override|open|suspend)\s+)*fun\s+(?:<[^>]+>\s+)?(\w+)\s*\(([^)]*)\)")
+KT_FUN = re.compile(r"^\s*(?:(?:public|private|protected|internal|override|open|suspend)\s+)*fun\s+(?:<[^>]+>\s+)?(\w+)\s*\(([^)]*)\)")
 # TypeScript / JS class or function-ish
 TS_CLASS = re.compile(r"^\s*(?:export\s+)?(?:abstract\s+)?class\s+([A-Z]\w*)")
 TS_FUNC = re.compile(r"^\s*(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(")
@@ -63,10 +62,10 @@ def is_test(path: str) -> bool:
     p = path.replace("\\", "/")
     name = os.path.basename(p)
     return (
-            "/test/" in p or "/tests/" in p or "/__tests__/" in p or "/src/test" in p
-            or name.endswith(("Test.java", "Tests.java", "IT.java", "Test.kt", ".test.ts", ".test.tsx",
-                              ".spec.ts", ".spec.tsx", ".test.js", ".spec.js"))
-            or name.startswith("test_") or name.endswith("_test.py") or name.endswith("_spec.py")
+        "/test/" in p or "/tests/" in p or "/__tests__/" in p or "/src/test" in p
+        or name.endswith(("Test.java", "Tests.java", "IT.java", "Test.kt", ".test.ts", ".test.tsx",
+                          ".spec.ts", ".spec.tsx", ".test.js", ".spec.js"))
+        or name.startswith("test_") or name.endswith("_test.py") or name.endswith("_spec.py")
     )
 
 
@@ -219,15 +218,15 @@ def scan(root: str, excludes: list[str], include_tests: bool, max_items: int) ->
         main_type = declared[0][1] if declared else base
         role = next((s for s in ROLE_SUFFIXES if main_type.endswith(s)), "")
         in_controller = (
-                role in {"Controller", "RestController", "Resource", "Resolver"}
-                or re.search(r"/(controller|web|rest|api|controllers)/", rel) is not None
-                or (is_js and re.search(r"@(Controller|Resolver)\b", text))
-                or (is_py and re.search(r"APIRouter|@router\.(get|post|put|delete|patch)", text))
+            role in {"Controller", "RestController", "Resource", "Resolver"}
+            or re.search(r"/(controller|web|rest|api|controllers)/", rel) is not None
+            or (is_js and re.search(r"@(Controller|Resolver)\b", text))
+            or (is_py and re.search(r"APIRouter|@router\.(get|post|put|delete|patch)", text))
         )
         in_service = (
-                role in {"Service", "UseCase", "Manager", "Handler", "Interactor"}
-                or "/service/" in rel or "/services/" in rel or "/usecase/" in rel
-                or (is_js and re.search(r"@Injectable\b", text) and "Service" in main_type)
+            role in {"Service", "UseCase", "Manager", "Handler", "Interactor"}
+            or "/service/" in rel or "/services/" in rel or "/usecase/" in rel
+            or (is_js and re.search(r"@Injectable\b", text) and "Service" in main_type)
         )
         in_domain = re.search(r"/(domain|model|entity|entities)/", rel) is not None
 
@@ -235,19 +234,18 @@ def scan(root: str, excludes: list[str], include_tests: bool, max_items: int) ->
             for m in re.finditer(r"\bimplements\s+([\w<>,.\s?]+?)\s*\{", text):
                 for n in split_params(m.group(1)):
                     impl_counts[re.sub(r"<.*", "", n).split(".")[-1].strip()] += 1
-            for m in re.finditer(r"\b(?:class|object)\s+\w+[^{]*?:\s*([\w<>,.\s()]+?)\s*\{",
-                                 text) if ext == ".kt" else []:
+            for m in re.finditer(r"\b(?:class|object)\s+\w+[^{]*?:\s*([\w<>,.\s()]+?)\s*\{", text) if ext == ".kt" else []:
                 for n in split_params(m.group(1)):
                     impl_counts[re.sub(r"[<(].*", "", n).strip()] += 1
 
         # --- Singleton shapes ---------------------------------------------------------------------------
         for i, ln in enumerate(lines, 1):
             if (
-                    re.search(r"\bstatic\s+[\w<>\[\], ?]+\s+getInstance\s*\(", ln)
-                    or re.search(r"\bgetInstance\s*\(\s*\)\s*[:{]", ln)
-                    or (is_py and re.search(r"\b_instance\s*=\s*None", ln))
-                    or re.search(r"private\s+static\s+(?:volatile\s+)?[\w<>]+\s+instance\b", ln)
-                    or (is_js and re.search(r"\bstatic\s+#?instance\b", ln))
+                re.search(r"\bstatic\s+[\w<>\[\], ?]+\s+getInstance\s*\(", ln)
+                or re.search(r"\bgetInstance\s*\(\s*\)\s*[:{]", ln)
+                or (is_py and re.search(r"\b_instance\s*=\s*None", ln))
+                or re.search(r"private\s+static\s+(?:volatile\s+)?[\w<>]+\s+instance\b", ln)
+                or (is_js and re.search(r"\bstatic\s+#?instance\b", ln))
             ):
                 sc.add(
                     "singleton",
@@ -319,9 +317,9 @@ def scan(root: str, excludes: list[str], include_tests: bool, max_items: int) ->
         if in_controller and not test:
             for i, ln in enumerate(lines, 1):
                 if re.match(r"\s*import\s", ln) and re.search(
-                        r"Repository\b|EntityManager|JdbcTemplate|\.entity\.|\.db\.|jakarta\.persistence|javax\.persistence|"
-                        r"@prisma/client|typeorm|sqlalchemy|prisma\.|from\s+['\"]@prisma",
-                        ln,
+                    r"Repository\b|EntityManager|JdbcTemplate|\.entity\.|\.db\.|jakarta\.persistence|javax\.persistence|"
+                    r"@prisma/client|typeorm|sqlalchemy|prisma\.|from\s+['\"]@prisma",
+                    ln,
                 ):
                     sc.add(
                         "layering_leak",
@@ -337,9 +335,9 @@ def scan(root: str, excludes: list[str], include_tests: bool, max_items: int) ->
         if in_domain and not test:
             for i, ln in enumerate(lines, 1):
                 if re.match(r"\s*import\s", ln) and re.search(
-                        r"springframework\.(web|http)|jakarta\.servlet|javax\.servlet|\.controller\.|\.web\.|"
-                        r"express|fastify|@nestjs/common|fastapi|flask|django\.http",
-                        ln,
+                    r"springframework\.(web|http)|jakarta\.servlet|javax\.servlet|\.controller\.|\.web\.|"
+                    r"express|fastify|@nestjs/common|fastapi|flask|django\.http",
+                    ln,
                 ):
                     sc.add(
                         "layering_leak",
@@ -362,8 +360,7 @@ def scan(root: str, excludes: list[str], include_tests: bool, max_items: int) ->
 
         # NestJS specific
         if is_js and re.search(r"@nestjs/", text):
-            if re.search(r"@Injectable\b", text) and re.search(r"prisma\.|PrismaService|TypeOrmModule",
-                                                               text) and in_controller:
+            if re.search(r"@Injectable\b", text) and re.search(r"prisma\.|PrismaService|TypeOrmModule", text) and in_controller:
                 sc.add(
                     "layering_leak",
                     "Nest: controller injecting Prisma/TypeORM directly — prefer a repository or service layer",
@@ -389,8 +386,7 @@ def scan(root: str, excludes: list[str], include_tests: bool, max_items: int) ->
                 m = METHOD_DECL.match(ln) or KT_FUN.match(ln)
                 if m:
                     name = m.group(1)
-                    if name not in {"getId", "setId", "equals", "hashCode", "toString",
-                                    "builder"} and not name.startswith(("get", "set", "is")):
+                    if name not in {"getId", "setId", "equals", "hashCode", "toString", "builder"} and not name.startswith(("get", "set", "is")):
                         behavior += 1
             if behavior <= 1 and entity_total:  # mostly accessors
                 anemic_entities.append((path, 1))
@@ -409,8 +405,7 @@ def scan(root: str, excludes: list[str], include_tests: bool, max_items: int) ->
         # God methods (rough complexity)
         if not test:
             for i, ln in enumerate(lines, 1):
-                m = METHOD_DECL.match(ln) or KT_FUN.match(ln) or (TS_FUNC.match(ln) if is_js else None) or (
-                    PY_DEF.match(ln) if is_py else None)
+                m = METHOD_DECL.match(ln) or KT_FUN.match(ln) or (TS_FUNC.match(ln) if is_js else None) or (PY_DEF.match(ln) if is_py else None)
                 if m:
                     name = m.group(1)
                     cx = estimate_complexity(lines, i)
@@ -434,8 +429,7 @@ def scan(root: str, excludes: list[str], include_tests: bool, max_items: int) ->
             )
 
         # --- floating-point money -----------------------------------------------------------------------
-        if not test and re.search(r"\b(double|float|BigDecimal|Decimal)\b.*(price|amount|money|balance|cost|fee)", text,
-                                  re.I):
+        if not test and re.search(r"\b(double|float|BigDecimal|Decimal)\b.*(price|amount|money|balance|cost|fee)", text, re.I):
             for i, ln in enumerate(lines, 1):
                 if re.search(r"\b(double|float)\b.*(price|amount|money|balance|cost|fee)", ln, re.I):
                     sc.add(
@@ -462,7 +456,7 @@ def scan(root: str, excludes: list[str], include_tests: bool, max_items: int) ->
         # --- missing idempotency on external writes (lead) ----------------------------------------------
         if (in_service or in_controller) and not test:
             if re.search(r"(post|put|patch|create|upsert|send|publish)\w*\s*\(", code, re.I) and re.search(
-                    r"(RestTemplate|WebClient|fetch|axios|httpx|requests\.|HttpClient|Feign)", code
+                r"(RestTemplate|WebClient|fetch|axios|httpx|requests\.|HttpClient|Feign)", code
             ):
                 if not re.search(r"idempoten|Idempotency-Key|idempotencyKey|clientRequestId", code, re.I):
                     sc.add(
@@ -470,6 +464,85 @@ def scan(root: str, excludes: list[str], include_tests: bool, max_items: int) ->
                         "External write without visible idempotency key: risk of duplicates on retry",
                         path, 1, "external write path",
                     )
+
+        # --- OpenAPI / codegen markers ------------------------------------------------------------------
+        if not test:
+            head = "\n".join(lines[:40])
+            if re.search(
+                r"Code generated by|DO NOT EDIT|@Generated|openapi-generator|orval|openapi-typescript|"
+                r"speakeasy|autogenerated|auto-generated",
+                head,
+                re.I,
+            ):
+                sc.add(
+                    "openapi_generated",
+                    "Generated API/DTO/client artifact — treat as DTO/Gateway from OpenAPI; do not hand-edit; prefer over parallel hand-rolled types",
+                    path, 1, base,
+                )
+                inventory["openapi_generated_files"] = inventory.get("openapi_generated_files", 0) + 1
+            if re.search(
+                r"openapitools|openapi-generator-cli|@openapitools|orval\.config|openapi-ts|speakeasy|"
+                r"fern generate|nestjs/swagger|springdoc|@ApiOperation|@ApiModel|openapi\.yaml|"
+                r"openapi-typescript|openapi-fetch|@hey-api/openapi-ts|\bkubb\b|\boazapfts\b",
+                text,
+                re.I,
+            ):
+                inventory["openapi_tooling_refs"] = inventory.get("openapi_tooling_refs", 0) + 1
+            # Hand-rolled frontend API module (lead only — confirm OpenAPI exists before reporting)
+            if is_js and re.search(r"/(api|services|lib)/", rel):
+                if re.search(r"\b(axios\.(get|post|put|patch|delete)|fetch\s*\(\s*[`'\"]/?api)", code):
+                    if not re.search(
+                        r"Code generated by|DO NOT EDIT|orval|openapi-typescript|openapi-fetch|@hey-api",
+                        head,
+                        re.I,
+                    ):
+                        sc.add(
+                            "hand_rolled_api_client",
+                            "Hand-rolled HTTP client module — if OpenAPI exists, prefer generated Gateway (orval/openapi-typescript/…)",
+                            path, 1, base,
+                        )
+
+    # --- OpenAPI spec files (yaml/json) -----------------------------------------------------------------
+    openapi_specs: list[str] = []
+    for dirpath, dirnames, filenames in os.walk(root if os.path.isdir(root) else os.path.dirname(root)):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS and not d.startswith(".")]
+        for fn in filenames:
+            low = fn.lower()
+            if low in {
+                "openapi.yaml", "openapi.yml", "openapi.json",
+                "swagger.yaml", "swagger.yml", "swagger.json",
+            } or (low.endswith((".yaml", ".yml", ".json")) and "openapi" in low):
+                full = os.path.join(dirpath, fn)
+                rel = os.path.relpath(full, sc.base)
+                openapi_specs.append(rel)
+                # quick content sniff
+                try:
+                    snippet = open(full, encoding="utf-8", errors="replace").read(2000)
+                except OSError:
+                    snippet = ""
+                if re.search(r"openapi\s*:\s*['\"]?3\.|swagger\s*:\s*['\"]?2\.", snippet, re.I):
+                    sc.add(
+                        "openapi_spec",
+                        "OpenAPI/Swagger contract document — treat as Remote Facade + DTO source of truth; check codegen and controller fidelity",
+                        full, 1, rel,
+                    )
+            # Frontend codegen config files
+            if low in {
+                "orval.config.js", "orval.config.ts", "orval.config.mjs",
+                "openapi-ts.config.ts", "openapi-ts.config.js",
+                "openapitools.json", "speakeasy.yaml", "speakeasy.yml",
+            } or low.startswith("orval.config"):
+                full = os.path.join(dirpath, fn)
+                rel = os.path.relpath(full, sc.base)
+                sc.add(
+                    "openapi_fe_codegen_config",
+                    "Frontend OpenAPI client generator config — credit generated Gateway; ensure CI runs generate and app imports generated client",
+                    full, 1, rel,
+                )
+                inventory["openapi_fe_codegen_configs"] = inventory.get("openapi_fe_codegen_configs", 0) + 1
+    inventory["openapi_spec_count"] = len(openapi_specs)
+    if openapi_specs:
+        inventory["openapi_specs"] = openapi_specs[:20]
 
     # --- post-walk: single-impl interfaces --------------------------------------------------------------
     for iface, (ipath, iline) in interfaces.items():
