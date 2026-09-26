@@ -4,12 +4,15 @@ Save as `docs/pattern-compliance-<YYYY-MM-DD>.md` (or `docs/pattern-compliance-<
 auditing one module). Keep it skimmable: a busy reader should get the verdict from the first screen and the
 priorities from the second. Delete any section that would be empty rather than writing "N/A".
 
+Optionally also emit a companion JSON file with the same findings for tooling (schema at the bottom).
+
 ````markdown
 # Pattern compliance report — <scope>
 
 - **Date:** <YYYY-MM-DD> · **Commit:** <short sha> · **Scope:** <paths audited> · **Out of scope:** <generated code, tests, …>
-- **Catalogs:** GoF (23 patterns) · Fowler PEAA (online catalog)
+- **Catalogs:** GoF (23 patterns) · Fowler PEAA · (optional) modern mapping
 - **Stack:** <languages, frameworks, persistence, UI>
+- **Skill version:** 1.1.0
 
 ## Summary
 
@@ -28,18 +31,18 @@ priorities from the second. Delete any section that would be empty rather than w
 |---|---|---|
 | Domain logic | Transaction Script / Domain Model / mixed | `path:line` |
 | Service Layer | present / absent / pass-through | |
-| Data source | Data Mapper (JPA) / Active Record / Gateway | |
+| Data source | Data Mapper (JPA/Prisma/…) / Active Record / Gateway | |
 | Repository / Query Object | | |
 | Presentation | Front Controller + Page Controllers; thin/fat | |
 | Distribution | DTOs? Remote Facade? Gateways to external systems? | |
-| Concurrency | `@Version`? none? | |
+| Concurrency | `@Version` / tokens? none? | |
 | Transactions (Unit of Work) | owned by … | |
 
 ## Findings
 
 Ordered by severity, then by value/cost. One block per finding.
 
-### F1 — <short title> · <Pattern name> (<GoF|PEAA>) · **<Verdict>** · <High|Medium|Low> · <Confirmed|Likely>
+### F1 — <short title> · <Pattern name> (<GoF|PEAA|Modern>) · **<Verdict>** · <High|Medium|Low> · <Confirmed|Likely>
 
 - **Where:** `path/File.java:42`, `path/Other.java:118` (max 5; "+N more" if the list is long)
 - **What the code does:** <one or two sentences, paraphrasing or quoting the key lines>
@@ -62,11 +65,12 @@ honest fit.").
 
 ## Method and limits
 
-- How leads were gathered (`scan_candidates.py`, regex-based, biased to Java/Kotlin/TS/Python) and what was read in full vs sampled.
+- How leads were gathered (`scan_candidates.py` v1.1, regex-based, strongest on Java/Kotlin/TS/Python) and what was read in full vs sampled.
 - Cross-checks run (`references/cross-checks.md`) and which produced findings.
 - Citations verified with `check_citations.py`: <n>/<n> resolve. (Existence of the line only; the claims were re-read separately.)
 - Paths/languages skipped. Anything the reader should verify (Likely findings).
 - Documented decisions in the repo that explain apparent deviations.
+- Execution budget applied: <e.g. "top 12 findings; 4 vertical slices fully read">.
 
 ## Appendix — lower-priority items
 
@@ -82,3 +86,41 @@ honest fit.").
 - The recommendation must be executable by a developer without re-deriving your analysis: say which type to introduce or move, and where.
 - Severity reflects consequence, not pattern prestige: a missing optimistic lock on a contended row is High; a missing Builder is Low.
 - Calibrate to context: a one-file utility does not warrant an Abstract Factory recommendation regardless of the catalog.
+
+## Optional JSON companion schema
+
+```json
+{
+  "meta": {
+    "date": "YYYY-MM-DD",
+    "commit": "abc1234",
+    "scope": ["src/main"],
+    "stack": ["Java", "Spring Boot", "JPA"],
+    "skillVersion": "1.1.0"
+  },
+  "summary": {
+    "verdict": "…",
+    "high": 0,
+    "medium": 0,
+    "low": 0
+  },
+  "architectureProfile": { },
+  "findings": [
+    {
+      "id": "F1",
+      "title": "…",
+      "pattern": "State",
+      "catalog": "GoF",
+      "verdict": "Missing",
+      "severity": "High",
+      "confidence": "Confirmed",
+      "locations": ["src/OrderService.java:42"],
+      "why": "…",
+      "recommendation": "…",
+      "tradeoff": "…"
+    }
+  ],
+  "wellApplied": [],
+  "deliberatelyNotRecommended": []
+}
+```

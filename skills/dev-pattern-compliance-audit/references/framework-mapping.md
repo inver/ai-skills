@@ -46,44 +46,62 @@ pattern (e.g. `ApplicationContext.getBean` = Service Locator).
 | Iterator                                  | `Iterable`, `Stream`, generators                                        |
 | Prototype                                 | copy constructors, `record` `with…` methods                             |
 
-## Node / TypeScript
+## Node / TypeScript (NestJS, Express, Prisma, TypeORM)
 
 | You see                                              | It is                                                                       |
 |------------------------------------------------------|-----------------------------------------------------------------------------|
-| Express/Nest middleware pipeline                     | Chain of Responsibility                                                     |
+| Express/Nest middleware pipeline / guards / interceptors | Chain of Responsibility                                                 |
 | Nest providers/modules + DI, Awilix/tsyringe         | Registry/Plugin/Factory (container)                                         |
-| Prisma/TypeORM/Drizzle client                        | Data Mapper (Prisma ≈ Query Object + Metadata Mapping via schema)           |
-| `zod`/`class-validator` schemas, generated API types | DTO + validation                                                            |
-| `EventEmitter`, RxJS                                 | Observer                                                                    |
-| Discriminated unions + exhaustive `switch`           | State/Visitor/Special Case idiom                                            |
-| module-level singleton export                        | Singleton (fine for stateless; a finding if it holds mutable request state) |
+| Prisma client / TypeORM / Drizzle                    | Data Mapper (Prisma ≈ Query Object + Metadata Mapping via schema)           |
+| `zod` / `class-validator` schemas, generated API types | DTO + validation                                                          |
+| `EventEmitter`, RxJS, Nest `@EventPattern`           | Observer                                                                    |
+| Discriminated unions + exhaustive `switch`           | State / Visitor / Special Case idiom                                        |
+| module-level singleton export                        | Singleton (fine for stateless; finding if it holds mutable request state)   |
+| Nest `@Controller` + service injection               | Page Controller + Service Layer                                             |
+| Nest custom providers / `useFactory`                 | Factory / Abstract Factory                                                  |
+| Prisma `$transaction`                                | Unit of Work (short-lived)                                                  |
 
-## React (front end)
+## React / Next.js (front end)
 
 | You see                                               | It is                                                                    |
 |-------------------------------------------------------|--------------------------------------------------------------------------|
-| React Router                                          | Front Controller + Application Controller (client side)                  |
-| Context providers                                     | Registry/dependency injection for the tree                               |
+| React Router / Next.js App Router                     | Front Controller + Application Controller (client side)                  |
+| Context providers                                     | Registry / dependency injection for the tree                             |
 | Custom hooks / query libs (TanStack Query, SWR)       | Gateway + cache (Identity Map-like) + Observer                           |
-| Reducers / state machines                             | Command + State                                                          |
+| Reducers / XState / state machines                    | Command + State                                                          |
 | Higher-order components / wrapper components          | Decorator                                                                |
 | Compound components, render props                     | Strategy / Template Method                                               |
-| Components holding fetch calls + business rules + JSX | Page Controller doing everything — the anemic-controller finding for UIs |
+| Server Components that only fetch + compose           | thin Page Controller (good)                                              |
+| Components holding fetch + business rules + JSX       | Page Controller doing everything — the anemic-controller finding for UIs |
+| `useOptimistic` / server actions with revalidation    | offline-friendly update patterns (not classic PEAA, but relevant)        |
 
-## Python
+## Python (FastAPI, Django, Flask, SQLAlchemy)
 
 | You see                                         | It is                                                                     |
 |-------------------------------------------------|---------------------------------------------------------------------------|
-| FastAPI `Depends`                               | DI/Registry/Factory; dependency chains = Chain of Responsibility          |
+| FastAPI `Depends`                               | DI / Registry / Factory; dependency chains ≈ Chain of Responsibility      |
 | Pydantic models                                 | DTO + Value Object                                                        |
-| SQLAlchemy `Session`                            | Unit of Work + Identity Map; declarative models = Data Mapper (classical) |
-| Django ORM models                               | Active Record (+ `Manager` = Table Data Gateway)                          |
-| decorators, context managers                    | Decorator, Template Method (`__enter__/__exit__`)                         |
+| SQLAlchemy `Session`                            | Unit of Work + Identity Map; declarative models = Data Mapper             |
+| Django ORM models + `Manager`                   | Active Record (+ Table Data Gateway via Manager)                          |
+| decorators, context managers                    | Decorator, Template Method (`__enter__`/`__exit__`)                       |
 | module-level instance                           | Singleton                                                                 |
-| `functools.singledispatch`, `dict` of callables | Strategy/Visitor idiom                                                    |
+| `functools.singledispatch`, `dict` of callables | Strategy / Visitor idiom                                                  |
+| FastAPI `APIRouter` + service functions         | Page Controller + Transaction Script / thin Service Layer                 |
+| Alembic / Django migrations                     | evolutionary schema companion                                             |
 
-## Graph / workflow engines (langgraph4j, state machines, pipelines)
+## .NET (ASP.NET Core) — best-effort
 
-A node-per-class graph with a runner is a Mediator/Chain/State-machine hybrid implemented by the engine.
+| You see                          | It is                                      |
+|----------------------------------|--------------------------------------------|
+| Built-in DI (`IServiceCollection`) | Registry + Factory                       |
+| `DbContext`                      | Unit of Work + Identity Map + Data Mapper  |
+| EF Core repositories / specs     | Repository + Query Object                  |
+| Middleware pipeline              | Chain of Responsibility                    |
+| `IHttpClientFactory` + typed clients | Gateway + Factory                      |
+| Records / `record struct`        | Value Object                               |
+
+## Graph / workflow engines (langgraph, temporal, state machines, pipelines)
+
+A node-per-class graph with a runner is a Mediator / Chain / State-machine hybrid implemented by the engine.
 Judge the *nodes and routers* against GoF/PEAA (are routers pure functions? does a node do more than one job?
 is state typed?), not the engine itself. Checkpointing is Memento.

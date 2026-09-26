@@ -6,16 +6,27 @@ you judge each class alone, so after the pattern pass, run these checks. Each on
 pattern whose value depends on being applied *everywhere*. Confirm each hit by reading the code, then report it
 as an ordinary finding (severity by consequence).
 
-Contents: [1 Gateway applied consistently](#1-gateway-applied-consistently) · [2 Invariant vs. database constraint](#2-invariant-vs-database-constraint) · [3 Soft delete vs. cascade and background jobs](#3-soft-delete-vs-cascade-and-background-jobs) · [4 Remote side effect vs. local write order](#4-remote-side-effect-vs-local-write-order) · [5 Locking that never reaches the client](#5-locking-that-never-reaches-the-client) · [6 One rule, several homes](#6-one-rule-several-homes) · [7 Comment / test / docs vs. code](#7-comment--test--docs-vs-code)
+Contents:
+1. Gateway applied consistently
+2. Invariant vs. database constraint
+3. Soft delete vs. cascade and background jobs
+4. Remote side effect vs. local write order
+5. Locking that never reaches the client
+6. One rule, several homes
+7. Comment / test / docs vs. code
+8. Frontend data-fetch consistency (new)
+9. Client-side business rules leakage (new)
+
+---
 
 ## 1. Gateway applied consistently
 
 *Pattern: Gateway (PEAA), Decorator/Proxy (GoF).* A gateway that maps errors, timeouts or auth in one wrapper is
 only as good as its weakest call site.
 
-- **Check:** list every call site of each external client (Feign/`RestClient`/SDK). For each, is it going through
+- **Check:** list every call site of each external client (Feign/`RestClient`/SDK/`fetch`/axios/httpx). For each, is it going through
   the shared wrapper / error decoder / retry policy, or calling the client raw?
-  `grep -rn "<clientField>\." src/main` vs `grep -rn "<WrapperClass>\." src/main`, then diff the two lists.
+  `grep -rn "<clientField>\." src` vs `grep -rn "<WrapperClass>\." src`, then diff the two lists.
 - **Finding when:** some paths wrap and others don't. Typical consequence: an outage yields a 503 on one endpoint and a
   generic 500 on another; or a timeout policy applies to reads but not to the write that matters.
 - **Fix shape:** apply the mapping once at the gateway (a decorating client, or an error decoder) instead of per call site.
@@ -26,8 +37,8 @@ only as good as its weakest call site.
 check-then-write in code is a race under concurrency.
 
 - **Check:** for each invariant stated in code or comments ("only one default", "one active per type", "name is
-  unique"), find the matching unique index / constraint in the migrations (`db/changelog`, `migrations/`, `*.sql`).
-  Look at bulk-update methods (`@Modifying`, `UPDATE ... SET`) that maintain the invariant: they bypass `@Version`.
+  unique"), find the matching unique index / constraint in the migrations (`db/changelog`, `migrations/`, `*.sql`, Prisma schema).
+  Look at bulk-update methods (`@Modifying`, `UPDATE ... SET`, Prisma `updateMany`) that maintain the invariant: they bypass `@Version`.
 - **Finding when:** the invariant has no constraint, especially when a sibling invariant does have one (inconsistency
   is the tell). Severity depends on whether two writers can actually overlap; say what you assumed about deployment.
 - **Fix shape:** partial unique index, or an upsert keyed on the natural key. Removing an unused flag also counts.
@@ -37,7 +48,7 @@ check-then-write in code is a race under concurrency.
 *Pattern: Dependent Mapping / aggregate boundary (PEAA).* A soft delete is an UPDATE, so database
 `ON DELETE CASCADE` never fires, and children stay live.
 
-- **Check:** does the entity/base class use `@SoftDelete`/`deleted` flags? If yes, look at the schema's FK cascades and
+- **Check:** does the entity/base class use `@SoftDelete`/`deleted` flags / Prisma `deletedAt`? If yes, look at the schema's FK cascades and
   at what the delete method touches. Then check scheduled jobs / pollers / queues: do they filter by a *live parent*,
   or keep processing children of deleted parents?
 - **Finding when:** children remain reachable or keep being processed after their parent is deleted, or comments
@@ -52,12 +63,12 @@ leaves an orphan on the remote side; the reverse order leaves a dangling local r
 - **Check:** in each service method that both calls a gateway and saves an entity, which comes first? What happens
   if the second step fails, or the caller retries?
 - **Finding when:** the ordering can leave orphans and there is no idempotency key, recovery path or compensating step.
-  Note when the code already handles a specific race (e.g. duplicate-key recovery) - credit that.
+  Note when the code already handles a specific race (e.g. duplicate-key recovery) — credit that.
 - **Fix shape:** persist a PENDING row first, an outbox, or an idempotent create keyed by a client-generated id.
 
 ## 5. Locking that never reaches the client
 
-*Pattern: Optimistic Offline Lock (PEAA).* `@Version` only protects overlapping transactions. If the version is not
+*Pattern: Optimistic Offline Lock (PEAA).* `@Version` / concurrency token only protects overlapping transactions. If the version is not
 in the API response and not accepted on update, two operators editing over minutes still get last-write-wins.
 
 - **Check:** is the version field (or an ETag/`If-Match`) present in response DTOs and update requests? Do update
@@ -71,7 +82,7 @@ in the API response and not accepted on update, two operators editing over minut
 two places will drift.
 
 - **Check:** grep for distinctive rule phrases and error strings across the repo; look for validation duplicated
-  between controller, service, and generated `@NotNull`/bean-validation annotations.
+  between controller, service, and generated `@NotNull`/bean-validation / zod / Pydantic annotations.
 - **Finding when:** the same rule (or message) appears twice, especially when one copy hard-codes a list (types,
   states) that a Strategy/enum already owns.
 - **Fix shape:** move the rule to the object that owns the variation (a method on the strategy/entity) and call it from both places.
@@ -84,3 +95,25 @@ Not a pattern, but it is where audits find real bugs cheaply, because a value wr
   the nearest comment, the test that asserts it, and the project docs (`AGENTS.md`, `docs/`). Also look for URL
   concatenation where the base already ends with the path segment being appended (`/v1beta` + `/v1beta/models`).
 - **Finding when:** they disagree. Say which one you believe is right and why; if unsure, report both locations.
+
+## 8. Frontend data-fetch consistency (new)
+
+*Pattern: Gateway + Identity Map / cache (client-side).* Multiple components fetching the same resource with different
+keys, stale-time, or error handling produce inconsistent UI and wasted requests.
+
+- **Check:** list distinct `useQuery` / `useSWR` / `fetch` call sites for the same REST path or resource. Compare cache keys,
+  `staleTime`, retry policy, and whether a shared custom hook or query-key factory exists.
+- **Finding when:** the same resource is fetched under two different keys or with divergent policies, or every page
+  re-implements the same loading/error UI instead of a shared boundary.
+- **Fix shape:** one custom hook (or query-key factory) per resource; shared error/loading boundaries.
+
+## 9. Client-side business rules leakage (new)
+
+*Pattern: Domain logic belongs on the server (or in a shared package), not in JSX / view models that only one client uses.*
+
+- **Check:** search components, hooks, and client stores for calculations that enforce business invariants
+  (discount eligibility, status transition rules, price derivations, permission matrices that duplicate the backend).
+- **Finding when:** the same rule also exists on the server (drift risk) *or* exists only on the client (security /
+  consistency risk for any other client).
+- **Fix shape:** move the rule to the shared domain / service layer; keep the client as a thin renderer of already-decided state.
+  Pure presentation helpers (formatting, sorting for display) are fine and should not be reported.

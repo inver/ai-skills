@@ -21,8 +21,11 @@ import re
 import subprocess
 import sys
 
-SKIP_DIRS = {".git", "node_modules", "build", "target", "dist", "out", ".gradle", ".idea", "__pycache__", ".venv", "venv"}
-EXT = r"java|kt|kts|tsx?|jsx?|py|ya?ml|xml|sql|gradle|properties|md|json|toml"
+SKIP_DIRS = {
+    ".git", "node_modules", "build", "target", "dist", "out", ".gradle", ".idea",
+    "__pycache__", ".venv", "venv", ".next", "coverage",
+}
+EXT = r"java|kt|kts|tsx?|jsx?|py|ya?ml|xml|sql|gradle|properties|md|json|toml|cs|go|rs|rb|php"
 # path:12  path:12-40  path:12,30,45  (the path must carry an extension)
 CITE = re.compile(rf"([\w./@-]+\.(?:{EXT})):(\d+(?:[-,]\d+)*)")
 
@@ -31,7 +34,9 @@ def repo_root(given: str | None) -> str:
     if given:
         return os.path.abspath(given)
     try:
-        return subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True, stderr=subprocess.DEVNULL).strip()
+        return subprocess.check_output(
+            ["git", "rev-parse", "--show-toplevel"], text=True, stderr=subprocess.DEVNULL
+        ).strip()
     except (OSError, subprocess.CalledProcessError):
         return os.getcwd()
 
@@ -75,7 +80,10 @@ def main() -> int:
     counts: dict[str, int] = {}
     bad: list[dict] = []
     for path, line in sorted(cites):
-        candidates = [p for p in idx.get(os.path.basename(path), []) if p.replace(os.sep, "/").endswith(path.lstrip("./"))]
+        candidates = [
+            p for p in idx.get(os.path.basename(path), [])
+            if p.replace(os.sep, "/").endswith(path.lstrip("./"))
+        ]
         if not candidates:
             bad.append({"cite": f"{path}:{line}", "reason": "file not found"})
             continue
