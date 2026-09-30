@@ -20,10 +20,7 @@ README.md        # This file
 Add new skills to the catalog:
 
 ```bash
-# Add a new skill
-npx @brequet/agent-sync catalog skill add my-skill
-
-# Or manually create a folder with SKILL.md
+# Create a folder with SKILL.md
 mkdir -p skills/my-skill
 # Then create skills/my-skill/SKILL.md with frontmatter
 ```
@@ -60,11 +57,11 @@ metadata:
 Users can add this catalog:
 
 ```bash
-# Local catalog
-npx @brequet/agent-sync add /path/to/this/catalog
+# Install skills from the GitHub repository
+npx skillfish add your-org/your-catalog
 
-# Git catalog (once published)
-npx @brequet/agent-sync add https://github.com/your-org/your-catalog
+# Or install a specific skill from it
+npx skillfish add your-org/your-catalog my-skill
 ```
 
 No build step needed - the CLI discovers skills by scanning the skills/ directory!
