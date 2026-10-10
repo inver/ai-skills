@@ -50,8 +50,8 @@ draw/state changes, uploads/readbacks, peak JVM/native/GPU memory, allocations, 
 timings around asynchronous graphics calls do not measure GPU execution.
 
 JDK Flight Recorder can investigate CPU, allocation, GC, locking, and I/O; it does not replace GPU
-profiling. [Oracle JFR troubleshooting guide](https://docs.oracle.com/en/java/javase/13/troubleshoot/troubleshoot-performance-issues-using-jfr.html)
-is version-specific; confirm runtime compatibility.
+profiling. [Oracle JFR troubleshooting guide](https://docs.oracle.com/en/java/javase/21/troubleshoot/troubleshoot-performance-issues-using-jfr.html)
+covers one JDK release; follow the documentation matching the project's runtime and confirm compatibility.
 
 Without measurements, propose a bounded experiment to distinguish CPU, GPU, synchronization, and loading bottlenecks.
 Label target budgets as proposed acceptance criteria. Check that optimizations preserve correctness and do not merely

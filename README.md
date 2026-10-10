@@ -6,10 +6,10 @@ A catalog of OpenCode skills.
 
 ```
 skills/          # OpenCode skills (each skill is a folder with SKILL.md)
-  frontend/
-    SKILL.md
-  backend-api/
-    SKILL.md
+  dev-pattern-compliance-audit/
+  intellij-plugin-engineering/
+  review-game-architecture/
+  review-game-editor-product/
 README.md        # This file
 ```
 
