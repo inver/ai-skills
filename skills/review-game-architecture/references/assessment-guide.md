@@ -77,3 +77,60 @@ person-days assuming a profiling hook. Implementation risk: low for instrumentat
 import-time freezes. Dependencies: disposable assets and representative hardware. Success: repeatable CPU/GPU traces and
 p95 interaction delay, followed by an accept/fix decision against an agreed latency budget. This supplies no evidence
 about the user's code.
+
+
+## Game-stack research and decision aids
+
+Sources checked 2026-10-10. Older design guidance remains useful where confirmed against the target API; live documentation
+may describe snapshots or newer versions. These sources support review criteria, not project-specific conclusions.
+
+- **LWJGL allocation:** distinguish scoped MemoryStack temporaries from explicitly owned MemoryUtil memory and
+  repeated GC-managed direct-buffer allocation. Check native memory lifetime independently of Java wrapper lifetime.
+  [LWJGL memory management](https://blog.lwjgl.org/memory-management-in-lwjgl-3/).
+  The current [configuration reference](https://javadoc.lwjgl.org/org/lwjgl/system/Configuration.html) distinguishes
+  basic checks from costly diagnostics; it is a snapshot reference, so verify the installed release before using flags.
+- **JVM tuning:** record effective heap/collector options, then compare pause distributions and memory under the same
+  workload. Avoid copying tuning bundles across runtime versions.
+  [Oracle GC tuning](https://docs.oracle.com/en/java/javase/25/gctuning/introduction-garbage-collection-tuning.html),
+  [Java launcher options](https://docs.oracle.com/en/java/javase/25/docs/specs/man/java.html).
+- **LibGDX structure/lifecycle:** inspect shared core and backend launcher dependencies, ApplicationListener callbacks,
+  Game/Screen transitions and owned-resource disposal. Observer, Singleton and Factory are contextual design choices:
+  inspect notification lifetime, global coupling and construction boundaries rather than counting patterns.
+  [Project layout](https://libgdx.com/wiki/start/project-generation),
+  [Application lifecycle](https://libgdx.com/wiki/app/the-life-cycle),
+  [Game/Screen example](https://libgdx.com/wiki/start/simple-game-extended),
+  [Threading contracts](https://libgdx.com/wiki/app/threading).
+- **ECS and data-oriented review:** Ashley supplies entity/component/system integration for LibGDX; evaluate actual
+  storage and access behavior separately. Unity's chunk/archetype model illustrates data locality and structural-change
+  tradeoffs, not a required Ashley implementation. System-order constraints should be explicit and checked for conflicts.
+  [Ashley](https://github.com/libgdx/ashley/wiki),
+  [Archetype storage](https://docs.unity3d.com/Packages/com.unity.entities@1.0/manual/concepts-archetypes.html),
+  [System ordering](https://docs.unity3d.com/Packages/com.unity.entities@1.0/manual/systems-update-order.html).
+- **Batching and render targets:** relate flushes to texture/shader/state changes; verify FrameBuffer lifetimes,
+  attachments and viewport/binding behavior. Counters identify activity, not GPU duration.
+  [SpriteBatch](https://libgdx.com/wiki/graphics/2d/spritebatch-textureregions-and-sprites),
+  [Frame buffers](https://libgdx.com/wiki/graphics/opengl-utils/frame-buffer-objects),
+  [GLProfiler](https://libgdx.com/wiki/graphics/profiling).
+- **Shaders:** inspect precision/range, uniforms, unused varyings and generated instruction/register behavior on the
+  target. Reduce unnecessary sampling, material switches and overdraw where ordering permits; compare divergent branches
+  with work avoided, not a blanket branch ban. Built-ins express operations compilers can optimize, without guaranteeing
+  a speedup. GLSL ES precision rules differ from desktop GLSL; do not generalize tool-output defaults to every source stage.
+  [Android shader analysis](https://developer.android.com/agi/frame-trace/shader-performance),
+  [Android materials guidance](https://developer.android.com/games/optimize/materials),
+  [Desktop GLSL specification](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html),
+  [GLSL ES 3.1 specification](https://registry.khronos.org/OpenGL/specs/es/3.1/GLSL_ES_Specification_3.10.pdf).
+- **Tool selection:** frame capture and pipeline inspection differ from scheduling analysis and statistical profiling.
+  Check supported platforms/APIs before proposing a capture.
+  [RenderDoc support](https://github.com/baldurk/renderdoc),
+  [GPUView on Windows](https://learn.microsoft.com/en-us/windows-hardware/drivers/display/using-gpuview).
+- **Requirement-driven assessment:** express quality goals as concrete scenarios with measurable responses. The skill's
+  traceability table, weights and priority thresholds are an operational convention, not an SEI standard.
+  [SEI quality attribute scenarios](https://www.sei.cmu.edu/library/reasoning-about-software-quality-attributes/).
+
+## Timing and persistence checkpoints
+
+Trace simulation ticks, rendering, input/event delivery and worker completion through pause/resume and overloaded frames.
+Verify bounded queues/backpressure, cancellation, resource disposal and ownership across thread handoffs. For scene/editor
+state, distinguish authoritative content from transient runtime/GPU state; inspect stable asset/entity IDs, serialization
+round trips, schema migration, undo transactions, atomic save/recovery and interrupted imports. Tie durability and timing
+claims to documented product scenarios and exercised tests; absence of a particular mechanism is not automatically a defect.

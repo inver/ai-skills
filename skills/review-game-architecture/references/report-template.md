@@ -1,105 +1,83 @@
 # Report template
 
-Save as `docs/game-architecture-<YYYY-MM-DD>.md` (or
-`docs/game-architecture-<scope>-<YYYY-MM-DD>.md` when reviewing one module or
-backend). Keep it skimmable: a busy reader should get the verdict from the
-first screen and the priorities from the second. Delete any section that would
-be empty rather than writing "N/A".
+Return Markdown. If a saved report is requested, use the requested path or
+`docs/game-architecture-<scope>-<YYYY-MM-DD>.md`. Keep the verdict and priorities easy to scan.
+For a quick pass use only Context, Findings and Recommendations; put omissions/questions in Context,
+include only top findings and quick wins, and keep compact traceability and recommendation fields.
 
 ````markdown
 # Game architecture review — <scope>
 
-- **Date:** <YYYY-MM-DD> · **Commit:** <short sha> · **Scope:** <paths/vertical slices reviewed> · **Out of scope:** <generated code, tests, unreviewed modules>
-- **Stack:** <languages, build tools, rendering backends, engine/framework>
-- **Skill version:** 1.1.0
+## Context
 
-## Project understanding
+- **Date / commit / skill version:** <date> / <revision> / 1.2.0
+- **Verdict / goals:** <bounded assessment>
+- **Targets / stack:** <hardware, OS, API, framework and JDK versions>
+- **Scope / mode:** <full or quick; inspected paths and vertical slices>
+- **Requirements / budgets:** <IDs, sources, workload, acceptance condition; unknown or proposed when needed>
+- **Capacity / milestones:** <available effort, existing commitments, deadlines; unknown when unavailable>
+- **Assumptions:** <explicitly labeled>
+- **Quick-pass omissions / gaps:** <required for quick pass; remove this bullet for full review>
 
-<goal, target platforms/hardware, tech stack, module/data flow, current
-capabilities. Keep this short — the roadmap carries the detail.>
+## Architecture Overview
 
-## Scope, assumptions, and questions
+<Module dependencies, core/backend/editor separation, data/asset flow, ECS/scene graph authority,
+thread/timing model, lifecycle and resource ownership; distinguish planned from implemented capabilities.>
 
-- **Inspected:** <files, specs, CI configs, vertical slices>
-- **Checks run:** <build, tests, profiler captures, static analysis — and their limits>
-- **Unknowns:** <performance budgets, content scale, team capacity, deadlines>
-- **Assumptions:** <explicitly labeled, each with what it depends on>
-- **Clarifying questions:** <at most five; mark which block the roadmap>
+## Findings
 
-## Assessment
+<Cover the eight areas: architecture/modules; rendering/API; shaders/materials/passes/GPU;
+editor/content; CPU/GPU profiling; builds/platforms/delivery; quality/maintainability; debt/risk/scalability.
+Retain supported strengths; mark insufficient evidence and inapplicable areas rather than inventing defects.>
 
-### Architecture and modules
-<dependency direction/cycles, ownership, lifecycle, ECS/service boundaries,
-threading, platform coupling — with evidence>
+### F-01 — <concrete finding or supported strength>
 
-### Rendering and API abstraction
-<implemented vs planned backends, capabilities/fallback, command/resource
-ownership, synchronization, render graph fit>
+- **Area / priority:** <area / priority with rationale>
+- **Evidence / confidence:** <observed fact, inference or unverified hypothesis; high/medium/low and why>
+- **Source:** <revision, file:line/symbol or capture/test location; attribute unverified user reports>
+- **Consequence / premises:** <affected product goal; distinguish observed behavior from unmeasured cost>
+- **Risk of inaction:** <required for high priority; consequence and uncertainty>
+- **Validation needed:** <smallest check, or existing relevant evidence and limits>
 
-### Shaders, materials, passes, GPU
-<compilation/variants, binding layouts, precision/color space, pass
-dependencies, culling/batching, bandwidth, allocations, readbacks>
+### Traceability Matrix
 
-### Editor and content workflow
-<undo/persistence, import/reimport, asset identity, errors, iteration time,
-runtime parity, UI/render thread work>
+| Finding ID | Requirement/budget ID and source | Workload/acceptance condition | Evidence reference and label/confidence | Status/gap | Recommendation IDs |
+|---|---|---|---|---|---|
+| <F-ID> | <approved ID or unmapped — needs stakeholder validation> | <condition or unknown> | <reference, label, confidence> | <met/violated/unknown with limits> | <RA-ID or none> |
 
-### CPU/GPU profiling
-<representative workloads, frame-time tails, allocations/GC, simulation,
-submission vs execution, memory/stalls>
+## Recommendations
 
-### Builds, platforms, delivery
-<toolchains, native loading/ABI, shader artifacts, incremental builds, CI
-coverage, reproducible packaging/distribution>
+### Quick wins
 
-### Quality and maintainability
-<tests at useful seams, graphics validation, cancellation/errors, API
-contracts, documentation accuracy>
+<Low-effort actions with high expected impact, including bounded validation that unlocks a decision.>
 
-### Debt, risk, scalability
-<concrete failure modes, content/team growth limits, migration cost, release
-blockers, support burden>
+| ID / finding IDs / priority / score factors | Action / rationale / expected impact | Owner | Effort range / confidence / assumptions | Implementation risk / risk of inaction | Dependencies / milestone | Success metric / validation scope |
+|---|---|---|---|---|---|---|
 
-## Well applied
+### Structural improvements
 
-<What is done well, with `path:line`. Short: name, where, one clause on why it
-fits. These are as informative as the defects — they show the team's intended
-style and prevent "fixing" sound design.>
+<Only justified larger changes; use the same fields. Omit this subsection for quick passes or when none are justified.>
 
-## Prioritized roadmap
+### Sequence and immediate next steps
 
-| ID | Priority | Phase | Action and evidence | Rationale | Expected impact | Effort | Risk: implementation / unresolved | Dependencies | Success metric |
-|---|---|---|---|---|---|---|---|---|---|
+<Reference RA IDs in dependency order; show R/U/E/A/D scores, weighted totals and any priority overrides.
+Fit upper effort estimates and validation into available capacity. Unknown capacity means provisional sequencing.
+For disruptive changes include rollout/rollback; keep measurements and budget agreement ahead of optimization commitments.>
 
-## Immediate next steps
+## Open Questions/Evidence Gaps
 
-<smallest useful actions and decisions, referencing roadmap IDs rather than
-duplicating recommendation details.>
-
-## Method and limits
-
-- **Vertical slices sampled:** <asset import → ... → disposal; scene load → ... → runtime; shader source → ... → execution>
-- **Unreviewed areas:** <paths skipped or sampled rather than read exhaustively>
-- **Evidence labels:** <observed fact / inference / unverified hypothesis, with confidence>
-- **Citations verified:** <n>/<n> resolve against current code; re-read before finalizing>
-- **External sources:** <official docs checked against repository versions>
-- **Execution budget:** <e.g. "top 8 findings; 3 vertical slices fully read">
+- **Questions / blocking decisions:** <owner if known>
+- **Inspected slices / unreviewed areas:** <specific paths and coverage limits>
+- **Checks actually run:** <commands/captures/results and limits; none if none>
+- **Missing evidence / experiments:** <hardware, baselines, budgets, representative workloads>
+- **Source verification:** <repository citations checked; version-appropriate official sources>
 ````
 
 ## Style rules for findings
 
-- Title states the *problem*, not the area alone: "Import path uploads
-  textures on the UI thread — Editor/content workflow", not "Editor workflow".
-- Evidence beats adjectives. `path:line` for every claim; no "seems",
-  "appears", "probably" in a finding marked Confirmed.
-- One root cause per finding. Group locations; don't list the same smell ten
-  times.
-- The recommendation must be executable by a developer without re-deriving your
-  analysis: say what to change and where.
-- Priority reflects consequence, not area prestige: a missing synchronization
-  on a contended resource is High; a missing render graph is Medium unless the
-  pass count justifies it.
-- Calibrate to context: a small prototype engine does not warrant a full render
-  graph recommendation regardless of the catalog.
-- Never invent measured values. If the baseline is unknown, say so and make
-  establishing it the first milestone.
+- One root cause per finding; group locations. Keep recommendation IDs stable when reordering.
+- Evidence supports the stated claim, not a stronger implied claim. Static call sites do not establish measured cost.
+- Preserve the skill's three evidence labels; do not introduce an ambiguous “Confirmed” status.
+- Missing ECS, render graphs or a named design pattern is not itself a defect. Tie changes to product requirements.
+- Specify review/roadmap actions and acceptance checks without writing implementation code.
+- Avoid prescribing a GPU upload thread before establishing context ownership and synchronization.
