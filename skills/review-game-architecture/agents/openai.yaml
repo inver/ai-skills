@@ -1,0 +1,4 @@
+interface:
+  display_name: "Game Architecture Review"
+  short_description: "Evidence-based engine reviews and improvement roadmaps"
+  default_prompt: "Use $review-game-architecture to review this project and produce a practical, prioritized improvement roadmap."
