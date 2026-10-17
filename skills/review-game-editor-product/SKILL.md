@@ -1,6 +1,24 @@
 ---
 name: review-game-editor-product
-description: Use when asked for a product review of a game creation tool, scene editor, or level editor, including creator workflows, editor UX, competitive positioning, retention, and business viability. Produce an evidence-based assessment and prioritized roadmap; exclude isolated code reviews and implementation tasks.
+description: >
+  Conduct structured product reviews of game editor software.
+  Evaluates editor-specific UX ergonomics (viewport navigation,
+  scene hierarchy management, asset pipeline friction, iteration
+  speed, undo/redo depth, dockable panel management) alongside
+  general product criteria. Produces evidence-grounded
+  recommendations with a comparison framework anchored in
+  real editors (Unity, Godot, Unreal, GameMaker, Construct 3,
+  GDevelop). Use for reviewing any game editor, whether
+  commercial, open-source, or internal.
+license: Apache 2.0
+compatibility: opencode
+metadata:
+  version: "1.0.0"
+  tags:
+    - game developing
+    - scene editor
+    - game editor
+  changelog: >
 ---
 
 # Game Editor Product Review
